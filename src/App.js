@@ -6,6 +6,7 @@ import HostDashboard from './components/HostDashboard';
 import ClientParticipation from './components/ClientParticipation';
 import EventResults from './components/EventResults';
 import UsageGuide from './components/UsageGuide';
+import UserProfile from './components/UserProfile';
 import './App.css';
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState('home');
   const [selectedEventId, setSelectedEventId] = useState(null);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   // URLパスからルートを取得する関数
   const getCurrentRoute = () => {
@@ -284,7 +286,15 @@ function App() {
             {user && (
               <div className="user-info">
                 <p>ログイン中: {user.displayName || user.email}</p>
-                <button onClick={() => auth.signOut()}>ログアウト</button>
+                <div className="user-actions">
+                  <button 
+                    onClick={() => setShowUserProfile(true)}
+                    className="profile-btn"
+                  >
+                    プロフィール編集
+                  </button>
+                  <button onClick={() => auth.signOut()}>ログアウト</button>
+                </div>
               </div>
             )}
           </div>
@@ -295,6 +305,16 @@ function App() {
   return (
     <div className="App">
       {renderContent()}
+      {showUserProfile && user && (
+        <UserProfile
+          user={user}
+          onClose={() => setShowUserProfile(false)}
+          onUpdate={() => {
+            // ユーザー情報を再取得
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }

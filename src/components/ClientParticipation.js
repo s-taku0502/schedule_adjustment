@@ -167,19 +167,25 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join' }) =>
             
             // 元の回答画面に遷移
             window.history.replaceState({}, '', '/event/join');
-            
-            // イベントIDがある場合はイベント情報を再取得
-            if (state.eventId) {
-              handleEventIdInput(state.eventId);
-            }
           }
         } catch (error) {
-          console.error('保存された状態の復元に失敗:', error);
-          sessionStorage.removeItem('preLoginState');
+          console.log('保存状態の復元エラー:', error);
         }
       }
+      
+      // ユーザー名が空で、ユーザーがログイン済みの場合、自動補完
+      if (!participantName && user.displayName) {
+        setParticipantName(user.displayName);
+      }
     }
-  }, [user, handleEventIdInput]);
+  }, [user, participantName]);
+
+  // ユーザーログイン時の名前自動補完
+  useEffect(() => {
+    if (user && user.displayName && !participantName) {
+      setParticipantName(user.displayName);
+    }
+  }, [user, participantName]);
 
   // ユーザーの回答履歴を取得する関数
   const loadResponseHistory = useCallback(async () => {
