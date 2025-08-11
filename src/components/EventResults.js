@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
@@ -8,85 +8,93 @@ const EventResults = ({ eventId, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [overlapResults, setOverlapResults] = useState([]);
 
-  const calculateOverlaps = useCallback((responsesData, eventData) => {
-    const dateTimeMap = {};
-    
-    // 各回答の時間帯を分析
-    responsesData.forEach(response => {
-      // timeSlots が存在し、配列であることを確認
-      if (!response.timeSlots || !Array.isArray(response.timeSlots)) {
-        return;
-      }
-      
-      response.timeSlots.forEach(slot => {
-        const { date, times } = slot;
-        if (!date || !times || !Array.isArray(times)) {
-          return;
-        }
-        
-        if (!dateTimeMap[date]) {
-          dateTimeMap[date] = {};
-        }
-        
-        times.forEach(timeRange => {
-          if (!timeRange || typeof timeRange !== 'string') {
-            return;
-          }
-          
-          const [start, end] = timeRange.split('-');
-          if (!start || !end) {
-            return;
-          }
-          
-          const startTime = parseInt(start);
-          const endTime = parseInt(end);
-          
-          if (isNaN(startTime) || isNaN(endTime)) {
-            return;
-          }
-          
-          // 30分単位で時間スロットを作成
-          for (let time = startTime; time < endTime; time += 30) {
-            const timeStr = `${Math.floor(time / 100)}:${(time % 100).toString().padStart(2, '0')}`;
-            if (!dateTimeMap[date][timeStr]) {
-              dateTimeMap[date][timeStr] = [];
-            }
-            dateTimeMap[date][timeStr].push(response.name);
-          }
-        });
-      });
-    });
-
-    // 重複を計算
-    const overlaps = [];
-    Object.keys(dateTimeMap).forEach(date => {
-      Object.keys(dateTimeMap[date]).forEach(time => {
-        const participants = dateTimeMap[date][time];
-        if (participants.length > 1) {
-          overlaps.push({
-            date,
-            time,
-            participants,
-            count: participants.length
-          });
-        }
-      });
-    });
-
-    // ソート
-    overlaps.sort((a, b) => {
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
-      return parseInt(a.time.replace(':', '')) - parseInt(b.time.replace(':', ''));
-    });
-
-    setOverlapResults(overlaps);
-  }, []);
-
   useEffect(() => {
     if (!eventId) {
       setLoading(false);
       return;
     }
+
+    // calculateOverlapsをuseEffect内に移動
+    const calculateOverlaps = (responsesData, eventData) => {
+      const dateTimeMap = {};
+      
+      // 各回答の時間帯を分析
+      responsesData.forEach(response => {
+        // timeSlots が存在し、配列であることを確認
+        if (!response.timeSlots || !Array.isArray(response.timeSlots)) {
+          return;
+        }
+        
+        response.timeSlots.forEach(slot => {
+          const { date, times } = slot;
+          if (!date || !times || !Array.isArray(times)) {
+            return;
+          }
+          
+          if (!dateTimeMap[date]) {
+            dateTimeMap[date] = {};
+          }
+          
+          times.forEach(timeRange => {
+            if (!timeRange || typeof timeRange !== 'string') {
+              return;
+            }
+            
+            const [start, end] = timeRange.split('-');
+            if (!start || !end) {
+              return;
+            }
+            
+            const startTime = parseInt(start);
+            const endTime = parseInt(end);
+            
+            if (isNaN(startTime) || isNaN(endTime)) {
+              return;
+            }
+            
+            // 30分単位で時間スロットを作成
+            for (let time = startTime; time < endTime; time += 30) {
+              const timeStr = `${Math.floor(time / 100)}:${(time % 100).toString().padStart(2, '0')}`;
+              
+              if (!dateTimeMap[date][timeStr]) {
+                dateTimeMap[date][timeStr] = [];
+              }
+              
+              dateTimeMap[date][timeStr].push({
+                name: response.name,
+                inPersonAvailable: response.inPersonAvailable || false
+              });
+            }
+          });
+        });
+      });
+      
+      // 重複する時間帯を抽出
+      const overlaps = [];
+      Object.entries(dateTimeMap).forEach(([date, timeSlots]) => {
+        Object.entries(timeSlots).forEach(([time, participants]) => {
+          if (participants.length > 1) {
+            overlaps.push({
+              date,
+              time,
+              participants: participants.map(p => p.name),
+              inPersonCount: participants.filter(p => p.inPersonAvailable).length,
+              totalCount: participants.length
+            });
+          }
+        });
+      });
+      
+      // 日付と時間でソート
+      overlaps.sort((a, b) => {
+        if (a.date !== b.date) {
+          return a.date.localeCompare(b.date);
+        }
+        return a.time.localeCompare(b.time);
+      });
+
+      setOverlapResults(overlaps);
+    };
 
     const loadEventAndResponses = async () => {
       setLoading(true);
@@ -155,7 +163,7 @@ const EventResults = ({ eventId, onBack }) => {
     };
 
     loadEventAndResponses();
-  }, [eventId, calculateOverlaps]);
+  }, [eventId]);
 
   // 回答削除機能
   const deleteResponse = async (responseId, participantName) => {
@@ -168,49 +176,14 @@ const EventResults = ({ eventId, onBack }) => {
       // 回答ドキュメントを削除
       await deleteDoc(doc(db, 'events', eventId, 'responses', responseId));
       
-      // 回答一覧とオーバーラップ結果を再読み込み
-      const responsesRef = collection(db, 'events', eventId, 'responses');
-      const snapshot = await getDocs(responsesRef);
+      // ページを再読み込みして最新データを取得
+      window.location.reload();
       
-      const responsesData = await Promise.all(
-        snapshot.docs.map(async (doc) => {
-          const responseData = { id: doc.id, ...doc.data() };
-          
-          // 各回答の時間スロットを取得
-          const timeSlotsRef = collection(db, 'events', eventId, 'responses', doc.id, 'timeSlots');
-          const timeSlotsSnapshot = await getDocs(timeSlotsRef);
-          
-          // timeSlots を確実に配列として設定
-          responseData.timeSlots = timeSlotsSnapshot.docs.map(timeSlotDoc => ({
-            id: timeSlotDoc.id,
-            ...timeSlotDoc.data()
-          })) || [];
-          
-          // timeSlots が空の場合、responseData から直接取得を試みる
-          if (responseData.timeSlots.length === 0 && responseData.times) {
-            responseData.timeSlots = responseData.times || [];
-          }
-          
-          return responseData;
-        })
-      );
-      
-      // 時間順にソート（新しい回答が上に来るように）
-      responsesData.sort((a, b) => {
-        const aTime = a.submittedAt?.toDate?.() || new Date(0);
-        const bTime = b.submittedAt?.toDate?.() || new Date(0);
-        return bTime - aTime; // 降順（新しい回答が上）
-      });
-      
-      setResponses(responsesData);
-      calculateOverlaps(responsesData, event);
-      
-      alert('回答を削除しました');
     } catch (error) {
       console.error('回答削除エラー:', error);
       alert('回答の削除に失敗しました');
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const copyEventLink = () => {

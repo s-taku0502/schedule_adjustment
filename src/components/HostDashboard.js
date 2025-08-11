@@ -8,6 +8,7 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
   const [eventTitle, setEventTitle] = useState('');
   const [eventDescription, setEventDescription] = useState('');
   const [candidateDates, setCandidateDates] = useState(['']);
+  const [responseDeadline, setResponseDeadline] = useState('');
   const [loading, setLoading] = useState(false);
   const [defaultInPersonAvailable, setDefaultInPersonAvailable] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -15,6 +16,7 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
   const [editDescription, setEditDescription] = useState('');
   const [editDates, setEditDates] = useState(['']);
   const [editDefaultInPerson, setEditDefaultInPerson] = useState(false);
+  const [editResponseDeadline, setEditResponseDeadline] = useState('');
 
   useEffect(() => {
     const loadUserEvents = async () => {
@@ -86,6 +88,7 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
         hostId: user.uid,
         hostName: user.displayName || user.email,
         defaultInPersonAvailable: defaultInPersonAvailable,
+        responseDeadline: responseDeadline ? new Date(responseDeadline) : null,
         createdAt: new Date()
       };
 
@@ -95,6 +98,7 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
       setEventTitle('');
       setEventDescription('');
       setCandidateDates(['']);
+      setResponseDeadline('');
       setDefaultInPersonAvailable(false);
       setShowCreateForm(false);
       
@@ -220,6 +224,14 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
     setEditDescription(event.description || '');
     setEditDates(event.candidateDates || ['']);
     setEditDefaultInPerson(event.defaultInPersonAvailable || false);
+    // 日付型をローカル形式の文字列に変換
+    if (event.responseDeadline) {
+      const deadline = event.responseDeadline.toDate?.() || new Date(event.responseDeadline);
+      const localISOTime = new Date(deadline.getTime() - deadline.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      setEditResponseDeadline(localISOTime);
+    } else {
+      setEditResponseDeadline('');
+    }
   };
 
   // 編集キャンセル
@@ -229,6 +241,7 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
     setEditDescription('');
     setEditDates(['']);
     setEditDefaultInPerson(false);
+    setEditResponseDeadline('');
   };
 
   // 編集候補日の操作
@@ -266,6 +279,7 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
         description: editDescription,
         candidateDates: validDates,
         defaultInPersonAvailable: editDefaultInPerson,
+        responseDeadline: editResponseDeadline ? new Date(editResponseDeadline) : null,
         updatedAt: new Date()
       };
 
@@ -386,6 +400,21 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
             </div>
 
             <div className="form-group">
+              <label htmlFor="response-deadline">回答期限（任意）</label>
+              <input
+                id="response-deadline"
+                name="responseDeadline"
+                type="datetime-local"
+                value={responseDeadline}
+                onChange={(e) => setResponseDeadline(e.target.value)}
+                placeholder="回答期限を設定してください"
+              />
+              <small className="help-text">
+                期限を設定すると、参加者に期限が表示され、期限後は回答できなくなります
+              </small>
+            </div>
+
+            <div className="form-group">
               <label htmlFor="default-in-person" className="checkbox-label">
                 <input
                   id="default-in-person"
@@ -474,6 +503,19 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
                     </div>
 
                     <div className="form-group">
+                      <label htmlFor={`edit-deadline-${event.id}`}>回答期限（任意）</label>
+                      <input
+                        id={`edit-deadline-${event.id}`}
+                        type="datetime-local"
+                        value={editResponseDeadline}
+                        onChange={(e) => setEditResponseDeadline(e.target.value)}
+                      />
+                      <small className="help-text">
+                        期限を設定すると、参加者に期限が表示され、期限後は回答できなくなります
+                      </small>
+                    </div>
+
+                    <div className="form-group">
                       <label>
                         <input
                           type="checkbox"
@@ -503,6 +545,14 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
                   )}
                   <p><strong>イベントID:</strong> {event.id}</p>
                   <p>候補日: {event.candidateDates.join(', ')}</p>
+                  {event.responseDeadline && (
+                    <p>
+                      <strong>回答期限:</strong> {event.responseDeadline.toDate?.()?.toLocaleString?.() || '不明'}
+                      {new Date() > event.responseDeadline.toDate?.() && (
+                        <span className="expired"> (期限切れ)</span>
+                      )}
+                    </p>
+                  )}
                   <p>作成日: {event.createdAt?.toDate?.()?.toLocaleDateString?.() || '不明'}</p>
                   <p>回答数: {event.responseCount || 0}件</p>
                   <div className="event-actions">

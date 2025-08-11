@@ -271,11 +271,32 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
     setTimeSlotInPersonAvailable(event?.defaultInPersonAvailable || false); // イベントのデフォルト設定を使用
   };
 
+  // 全日可ボタンのハンドラー
+  const addAllDaySlot = (date) => {
+    const timeSlotObj = {
+      timeRange: '09:00-21:00',
+      inPersonAvailable: event?.defaultInPersonAvailable || false
+    };
+    
+    setTimeSlots(prev => ({
+      ...prev,
+      [date]: [...prev[date], timeSlotObj]
+    }));
+  };
+
   // 全角数字を半角に変換する関数
   const convertToHalfWidth = (str) => {
     return str.replace(/[０-９]/g, (char) => {
       return String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
     });
+  };
+
+  // 4桁の時間を HH:MM 形式にフォーマットする関数
+  const formatTimeDisplay = (timeStr) => {
+    if (timeStr.length === 4) {
+      return `${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}`;
+    }
+    return timeStr;
   };
 
   // 時間の妥当性チェック関数
@@ -328,18 +349,18 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
     
     // 4桁チェック
     if (normalizedStartTime.length !== 4 || normalizedEndTime.length !== 4) {
-      alert('時間は4桁の数字で入力してください (例: 0900)');
+      alert('時間は4桁の数字で入力してください (例: 0900 → 09:00として表示されます)');
       return;
     }
     
     // 時間の妥当性チェック
     if (!isValidTime(normalizedStartTime)) {
-      alert('開始時間が正しくありません。時間は00-23、分は00-59で入力してください (例: 0900)');
+      alert('開始時間が正しくありません。時間は00-23、分は00-59で入力してください (例: 0900 → 09:00として表示されます)');
       return;
     }
     
     if (!isValidTime(normalizedEndTime)) {
-      alert('終了時間が正しくありません。時間は00-23、分は00-59で入力してください (例: 1200)');
+      alert('終了時間が正しくありません。時間は00-23、分は00-59で入力してください (例: 1200 → 12:00として表示されます)');
       return;
     }
     
@@ -352,7 +373,7 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
     }
     
     const timeSlotObj = {
-      timeRange: `${normalizedStartTime}-${normalizedEndTime}`,
+      timeRange: `${formatTimeDisplay(normalizedStartTime)}-${formatTimeDisplay(normalizedEndTime)}`,
       inPersonAvailable: timeSlotInPersonAvailable
     };
     
@@ -385,6 +406,12 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
   const submitResponse = async () => {
     if (!participantName.trim()) {
       alert('お名前を入力してください');
+      return;
+    }
+
+    // 回答期限チェック
+    if (event.responseDeadline && new Date() > event.responseDeadline.toDate?.()) {
+      alert('回答期限を過ぎているため、回答できません。');
       return;
     }
 
@@ -594,6 +621,21 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
           <div className="event-info">
             <h3>{event.title}</h3>
             <p>ホスト: {event.hostName}</p>
+            {event.responseDeadline && (
+              <div className="deadline-info">
+                <p>
+                  <strong>回答期限:</strong> {event.responseDeadline.toDate?.()?.toLocaleString?.() || '不明'}
+                  {new Date() > event.responseDeadline.toDate?.() && (
+                    <span className="deadline-expired"> (期限切れ)</span>
+                  )}
+                </p>
+                {new Date() > event.responseDeadline.toDate?.() && (
+                  <div className="deadline-expired-message">
+                    <p>⚠️ 回答期限を過ぎているため、新規回答・変更はできません。</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -616,9 +658,12 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
 
           <div className="time-slots-section">
             <h4>参加可能な時間帯を選択</h4>
+            <p className="optional-notice">
+              ※ 各日程への入力は任意です。参加可能な日程のみ時間帯を入力してください。
+            </p>
             {event.candidateDates.map(date => (
               <div key={date} className="date-section">
-                <h5>{date}</h5>
+                <h5>{date} <small className="optional-text">（任意）</small></h5>
                 <div className="time-slots">
                   {timeSlots[date]?.map((slot, index) => (
                     <div key={index} className="time-slot">
@@ -641,7 +686,7 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
                         <div className="time-field">
                           <input
                             type="text"
-                            placeholder="開始時間 (例: 0900)"
+                            placeholder="開始時間 (例: 09:00)"
                             value={startTime}
                             onChange={(e) => handleTimeInput(e.target.value, setStartTime)}
                             maxLength="4"
@@ -654,7 +699,7 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
                             {startTime.length}/4
                             {startTime.length === 4 && (
                               <span className={isValidTime(startTime) ? 'valid' : 'invalid-time'}>
-                                {isValidTime(startTime) ? ' ✓' : ' ✗'}
+                                {isValidTime(startTime) ? ` ✓ (${formatTimeDisplay(startTime)})` : ' ✗'}
                               </span>
                             )}
                           </small>
@@ -663,7 +708,7 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
                         <div className="time-field">
                           <input
                             type="text"
-                            placeholder="終了時間 (例: 1200)"
+                            placeholder="終了時間 (例: 12:00)"
                             value={endTime}
                             onChange={(e) => handleTimeInput(e.target.value, setEndTime)}
                             maxLength="4"
@@ -676,7 +721,7 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
                             {endTime.length}/4
                             {endTime.length === 4 && (
                               <span className={isValidTime(endTime) ? 'valid' : 'invalid-time'}>
-                                {isValidTime(endTime) ? ' ✓' : ' ✗'}
+                                {isValidTime(endTime) ? ` ✓ (${formatTimeDisplay(endTime)})` : ' ✗'}
                               </span>
                             )}
                           </small>
@@ -705,12 +750,20 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
                       </div>
                     </div>
                   ) : (
-                    <button 
-                      onClick={() => addTimeSlot(date)}
-                      className="add-time-btn"
-                    >
-                      時間帯を追加
-                    </button>
+                    <div className="add-time-actions">
+                      <button 
+                        onClick={() => addTimeSlot(date)}
+                        className="add-time-btn"
+                      >
+                        時間帯を追加
+                      </button>
+                      <button 
+                        onClick={() => addAllDaySlot(date)}
+                        className="add-all-day-btn"
+                      >
+                        全日可 (09:00-21:00)
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -780,10 +833,12 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
 
           <button 
             onClick={submitResponse} 
-            disabled={loading}
+            disabled={loading || (event.responseDeadline && new Date() > event.responseDeadline.toDate?.())}
             className="submit-btn"
           >
-            {loading ? '送信中...' : '回答を送信'}
+            {loading ? '送信中...' : 
+             (event.responseDeadline && new Date() > event.responseDeadline.toDate?.()) ? 
+             '期限切れ' : '回答を送信'}
           </button>
           </div>
         )}
