@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { collection, addDoc, doc, getDoc, query, where, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
-const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join' }) => {
-  const [eventId, setEventId] = useState(initialEventId || '');
+const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSharedLinkAccess = false, sharedEventId }) => {
+  const [eventId, setEventId] = useState(sharedEventId || initialEventId || '');
   const [event, setEvent] = useState(null);
   const [participantName, setParticipantName] = useState('');
   const [timeSlots, setTimeSlots] = useState({});
@@ -146,6 +146,14 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join' }) =>
       findEvent();
     }
   }, [initialEventId, findEvent]);
+
+  // 共有リンクアクセス時の自動読み込み
+  useEffect(() => {
+    if (isSharedLinkAccess && sharedEventId && sharedEventId.trim()) {
+      setEventId(sharedEventId);
+      findEvent();
+    }
+  }, [isSharedLinkAccess, sharedEventId, findEvent]);
 
   // ログイン状態の変化を監視し、保存された状態を復元
   useEffect(() => {
@@ -518,28 +526,45 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join' }) =>
         <h2>日程調整への参加</h2>
       </div>
 
+      {isSharedLinkAccess && (
+        <div className="shared-link-header">
+          <div className="invitation-banner">
+            <h3>イベントに招待されました！</h3>
+            <p>共有リンクからアクセスしています。下記のイベントに参加するために回答してください。</p>
+          </div>
+        </div>
+      )}
+
       {/* モード切り替えタブ */}
-      <div className="mode-tabs">
-        <button 
-          className={`tab-btn ${currentMode === 'join' ? 'active' : ''}`}
-          onClick={() => setCurrentMode('join')}
-        >
-          新規参加
-        </button>
-        <button 
-          className={`tab-btn ${currentMode === 'history' ? 'active' : ''}`}
-          onClick={() => {
-            setCurrentMode('history');
-            if (user) {
-              loadResponseHistory();
-            }
-          }}
-          disabled={!user}
-        >
-          回答履歴
-          {!user && <small>（ログイン必要）</small>}
-        </button>
-      </div>
+      {!isSharedLinkAccess && (
+        <div className="mode-tabs">
+          <button 
+            className={`tab-btn ${currentMode === 'join' ? 'active' : ''}`}
+            onClick={() => setCurrentMode('join')}
+          >
+            新規参加
+          </button>
+          <button 
+            className={`tab-btn ${currentMode === 'history' ? 'active' : ''}`}
+            onClick={() => {
+              setCurrentMode('history');
+              if (user) {
+                loadResponseHistory();
+              }
+            }}
+            disabled={!user}
+          >
+            回答履歴
+            {!user && <small>（ログイン必要）</small>}
+          </button>
+        </div>
+      )}
+      
+      {isSharedLinkAccess && (
+        <div className="shared-link-mode">
+          <h3>イベント参加フォーム</h3>
+        </div>
+      )}
 
       {currentMode === 'join' ? (
         // 新規参加モード

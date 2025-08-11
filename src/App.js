@@ -15,6 +15,7 @@ function App() {
   const [currentView, setCurrentView] = useState('home');
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [isSharedLinkAccess, setIsSharedLinkAccess] = useState(false);
 
   // URLパスからルートを取得する関数
   const getCurrentRoute = () => {
@@ -22,9 +23,10 @@ function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const eventIdFromUrl = urlParams.get('eventId');
     
-    // URLパラメータにeventIdがある場合は自動的にclient-joinにルート
+    // URLパラメータにeventIdがある場合は共有リンクアクセスとして処理
     if (eventIdFromUrl && path === '/') {
       setSelectedEventId(eventIdFromUrl);
+      setIsSharedLinkAccess(true);
       return 'client-join';
     }
     
@@ -192,8 +194,13 @@ function App() {
         return (
           <ClientParticipation 
             user={user} 
-            onBack={() => navigateTo('home')}
+            onBack={() => {
+              setIsSharedLinkAccess(false);
+              navigateTo('home');
+            }}
             mode="join"
+            isSharedLinkAccess={isSharedLinkAccess}
+            sharedEventId={selectedEventId}
           />
         );
       case 'client-history':
@@ -244,6 +251,34 @@ function App() {
         return (
           <div className="home">
             <h1>日程調整ツール</h1>
+            
+            {isSharedLinkAccess && selectedEventId && (
+              <div className="shared-link-banner">
+                <h2>イベントへの招待</h2>
+                <p>イベントの共有リンクからアクセスされました</p>
+                <div className="banner-actions">
+                  <button 
+                    className="nav-btn client-btn primary"
+                    onClick={() => navigateTo('client-join')}
+                  >
+                    イベントに参加する
+                    <small>（すぐに回答できます）</small>
+                  </button>
+                  <button 
+                    className="nav-btn secondary"
+                    onClick={() => {
+                      setIsSharedLinkAccess(false);
+                      setSelectedEventId(null);
+                      // URLからeventIdパラメータを削除
+                      window.history.replaceState({}, '', '/');
+                    }}
+                  >
+                    ホーム画面に戻る
+                  </button>
+                </div>
+              </div>
+            )}
+            
             <div className="nav-buttons">
               <button 
                 className="nav-btn host-btn"

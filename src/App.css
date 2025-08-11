@@ -275,6 +275,95 @@
   margin: 15px 0;
 }
 
+/* 共有リンクアクセス用バナー */
+.shared-link-banner {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 2px solid #2196f3;
+  border-radius: 12px;
+  padding: 25px;
+  margin: 20px 0 30px 0;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.15);
+}
+
+.shared-link-banner h2 {
+  color: #1976d2;
+  margin: 0 0 10px 0;
+  font-size: 24px;
+}
+
+.shared-link-banner p {
+  color: #424242;
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.banner-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.banner-actions .primary {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+}
+
+.banner-actions .secondary {
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.banner-actions .secondary:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* ClientParticipation内の共有リンクヘッダー */
+.shared-link-header {
+  margin: 20px 0;
+}
+
+.invitation-banner {
+  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+  border: 2px solid #4caf50;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 3px 10px rgba(76, 175, 80, 0.15);
+}
+
+.invitation-banner h3 {
+  color: #2e7d32;
+  margin: 0 0 8px 0;
+  font-size: 20px;
+}
+
+.invitation-banner p {
+  color: #424242;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.shared-link-mode {
+  background: #f8f9fa;
+  padding: 15px;
+  margin: 20px 0;
+  border-radius: 8px;
+  border-left: 4px solid #2196f3;
+}
+
+.shared-link-mode h3 {
+  margin: 0;
+  color: #1976d2;
+  font-size: 18px;
+}
+
 .user-info p {
   margin: 0 0 10px 0;
   font-weight: bold;
