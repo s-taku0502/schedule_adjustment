@@ -548,10 +548,17 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
 
   return (
     <div className="client-participation">
-      <div className="header">
-        <button onClick={onBack} className="back-btn">← 戻る</button>
-        <h2>日程調整への参加</h2>
-      </div>
+    <div className="header">
+    <button onClick={onBack} className="back-btn">← 戻る</button>
+    <h2>日程調整への参加</h2>
+    </div>
+
+    {/* イベント説明を表示（イベントが存在し、説明がある場合のみ） */}
+    {event && event.description && (
+    <div className="event-description client-description">
+      <strong>イベント説明:</strong> {event.description}
+    </div>
+    )}
 
       {isSharedLinkAccess && (
         <div className="shared-link-header">
