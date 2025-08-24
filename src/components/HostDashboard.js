@@ -16,6 +16,9 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
   const [editDescription, setEditDescription] = useState('');
   const [editDates, setEditDates] = useState(['']);
   const [editDefaultInPerson, setEditDefaultInPerson] = useState(false);
+  // 連続日程入力用 state
+  const [rangeStart, setRangeStart] = useState('');
+  const [rangeEnd, setRangeEnd] = useState('');
   const [editResponseDeadline, setEditResponseDeadline] = useState('');
 
   useEffect(() => {
@@ -397,6 +400,64 @@ const HostDashboard = ({ user, onBack, onViewResults, showCreateForm: initialSho
               >
                 候補日を追加
               </button>
+
+              {/* 連続日程入力 */}
+              <div className="date-range-input" style={{marginTop: '16px'}}>
+                <label style={{display:'block', marginBottom:'6px'}}>連続日程を一括追加</label>
+                <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                  <input
+                    type="date"
+                    value={rangeStart}
+                    onChange={e => setRangeStart(e.target.value)}
+                    placeholder="開始日"
+                  />
+                  <span>〜</span>
+                  <input
+                    type="date"
+                    value={rangeEnd}
+                    onChange={e => setRangeEnd(e.target.value)}
+                    placeholder="終了日"
+                  />
+                  <button
+                    type="button"
+                    className="add-date-btn"
+                    onClick={() => {
+                      if (!rangeStart || !rangeEnd) {
+                        alert('開始日と終了日を入力してください');
+                        return;
+                      }
+                      const start = new Date(rangeStart);
+                      const end = new Date(rangeEnd);
+                      if (end < start) {
+                        alert('終了日は開始日以降の日付を選択してください');
+                        return;
+                      }
+                      // 日付範囲を生成
+                      const dates = [];
+                      let d = new Date(start);
+                      while (d <= end) {
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth()+1).padStart(2,'0');
+                        const dd = String(d.getDate()).padStart(2,'0');
+                        dates.push(`${yyyy}-${mm}-${dd}`);
+                        d.setDate(d.getDate()+1);
+                      }
+                      // 既存候補日と重複しないものだけ追加
+                      const newDates = dates.filter(date => !candidateDates.includes(date));
+                      if (newDates.length === 0) {
+                        alert('指定範囲の日付はすでに候補に含まれています');
+                        return;
+                      }
+                      setCandidateDates([...candidateDates, ...newDates]);
+                      setRangeStart('');
+                      setRangeEnd('');
+                    }}
+                  >
+                    連続日程を追加
+                  </button>
+                </div>
+                <small style={{color:'#666'}}>開始日〜終了日までの全日付を候補日程に一括追加します</small>
+              </div>
             </div>
 
             <div className="form-group">
