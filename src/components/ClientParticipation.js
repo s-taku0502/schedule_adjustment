@@ -556,7 +556,12 @@ const ClientParticipation = ({ user, onBack, initialEventId, mode = 'join', isSh
     {/* イベント説明を表示（イベントが存在し、説明がある場合のみ） */}
     {event && event.description && (
     <div className="event-description client-description">
-      <strong>イベント説明:</strong> {event.description}
+      <strong>イベント説明:</strong><br />
+      <span
+        dangerouslySetInnerHTML={{
+          __html: event.description.replace(/\n/g, '<br />')
+        }}
+      />
     </div>
     )}
 
